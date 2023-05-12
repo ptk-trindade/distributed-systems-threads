@@ -43,11 +43,6 @@ func newSharedVectorV2(n int) *sharedVectorV2 {
 }
 
 func (sv *sharedVectorV2) insert(value int) bool {
-	if sv.insertIndex >= MAX_CONSUMED {
-		sv.cancelCtx()
-		return false
-	}
-
 	length := len(sv.vector)
 
 	err := sv.empty.Acquire(sv.ctx, 1)
@@ -55,6 +50,11 @@ func (sv *sharedVectorV2) insert(value int) bool {
 		return false
 	}
 	sv.mtxProducer.Lock()
+	if sv.insertIndex >= MAX_CONSUMED {
+		sv.cancelCtx()
+		sv.mtxProducer.Unlock()
+		return false
+	}
 
 	sv.vector[sv.insertIndex%length] = value
 	sv.insertIndex++
@@ -68,10 +68,6 @@ func (sv *sharedVectorV2) insert(value int) bool {
 }
 
 func (sv *sharedVectorV2) pop() (int, bool) {
-	if sv.cosumeIndex >= MAX_CONSUMED {
-		return 0, false
-	}
-
 	length := len(sv.vector)
 
 	err := sv.full.Acquire(sv.ctx, 1)

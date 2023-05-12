@@ -54,16 +54,17 @@ func (sv *sharedVectorV1) insert(value int) bool {
 
 	keepGoing := true
 	sv.mutex.Lock()
+	if sv.inserted >= MAX_CONSUMED {
+		sv.cancelCtx()
+		sv.mutex.Unlock()
+		return false
+	}
 
 	sv.vector[sv.index] = value
 	sv.index++
 	sv.inserted++
 
 	sv.historic = append(sv.historic, sv.index)
-	if sv.inserted >= MAX_CONSUMED {
-		sv.cancelCtx()
-		keepGoing = false
-	}
 	sv.mutex.Unlock()
 	sv.full.Release(1)
 
