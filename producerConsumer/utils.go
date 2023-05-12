@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"time"
@@ -15,7 +16,8 @@ func RandInt(n int) int {
 }
 
 func isPrime(n int) bool {
-	for i := 2; i*i < n; i++ {
+	sqrtn := int(math.Sqrt(float64(n)))
+	for i := 2; i < sqrtn; i++ {
 		if n%i == 0 {
 			return false
 		}
@@ -24,7 +26,7 @@ func isPrime(n int) bool {
 }
 
 func writeFile(txt, fileName string) {
-	f, err := os.Create("data.txt")
+	f, err := os.Create(fileName)
 
 	if err != nil {
 		fmt.Println("Error: Couldn't create file: ", err)
