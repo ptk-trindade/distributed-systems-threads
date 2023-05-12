@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 )
 
 var MAX_CONSUMED int = int(1e5)
 var MAX_NUMBER_PRODUCED int = int(1e7)
 
-func consumer(sv sharedVector) {
+func consumer(sv sharedVector, wg *sync.WaitGroup) {
 	val, keepGoing := sv.pop()
 	for keepGoing {
 		if isPrime(val) {
@@ -20,6 +21,7 @@ func consumer(sv sharedVector) {
 		}
 		val, keepGoing = sv.pop()
 	}
+	wg.Done()
 }
 
 func producer(sv sharedVector) {
@@ -77,11 +79,13 @@ func main() {
 	}
 
 	// Start consumers
-	for i := 1; i < nc; i++ {
-		go consumer(sv)
+	var wg sync.WaitGroup
+	wg.Add(nc)
+	for i := 0; i < nc; i++ {
+		go consumer(sv, &wg)
 	}
 
-	consumer(sv) // blocking consumer
+	wg.Wait()
 
 	elapsedTime := time.Since(startTime)
 
