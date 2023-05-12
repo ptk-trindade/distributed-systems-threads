@@ -28,10 +28,10 @@ func RandInt(n int) int {
 	return seed.Intn(n)
 }
 
-func sumSlice(slice []int) int {
+func sumSlice(slice []int8) int {
 	sum := 0
 	for _, v := range slice {
-		sum += v
+		sum += int(v)
 	}
 	return sum
 }
@@ -64,9 +64,9 @@ func main() {
 	}
 
 	// Generate random integers
-	integers := make([]int, n)
+	integers := make([]int8, n)
 	for i := 0; i < n; i++ {
-		integers[i] = RandInt(201) - 100
+		integers[i] = int8(RandInt(201) - 100)
 	}
 
 	numbersPerThread := n / k
@@ -100,12 +100,12 @@ func main() {
 	fmt.Println("Total sum:", totalSum, "\tElapsed time:", elapsed)
 
 	// Check result
-	var sum2 int
-	for _, v := range integers {
-		sum2 += v
-	}
+	startTime = time.Now()
 
-	fmt.Println("Single thread sum:", sum2)
+	sum2 := sumSlice(integers)
+
+	elapsed = time.Since(startTime)
+	fmt.Printf("Single thread sum: %d \t (made in %v)\n", sum2, elapsed)
 
 	if totalSum != sum2 {
 		fmt.Println("Error: Sum is not correct")
