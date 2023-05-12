@@ -7,65 +7,89 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-type sharedVector struct {
+type sharedVector interface {
+	insert(value int) bool
+	pop() (int, bool)
+	getHistoric() []int
+	// ctx 		context.Context
+	// cancelCtx	context.CancelFunc
+}
+
+// V1
+type sharedVectorV1 struct {
 	mutex       sync.Mutex
 	empty, full *semaphore.Weighted
 	vector      []int
 	index       int
 	inserted    int
 	historic    []int
+	ctx         context.Context
+	cancelCtx   context.CancelFunc
 }
 
 // newSharedVector creates a new shared vector with n elements.
-func newSharedVector(n int) *sharedVector {
-	fullSemaphore := semaphore.NewWeighted(int64(n - 1))
+func newSharedVectorV1(n int) *sharedVectorV1 {
+	ctx, cancelCtx := context.WithCancel(context.Background())
+	fullSemaphore := semaphore.NewWeighted(int64(n))
 
-	for i := 0; i < n-1; i++ {
-		fullSemaphore.Acquire(context.Background(), 1)
+	for i := 0; i < n; i++ {
+		fullSemaphore.Acquire(ctx, 1)
 	}
 
-	return &sharedVector{
-		vector:   make([]int, n),
-		empty:    semaphore.NewWeighted(int64(n - 1)),
-		full:     fullSemaphore,
-		historic: make([]int, 0, 2*MAX_CONSUMED+50),
+	return &sharedVectorV1{
+		vector:    make([]int, n),
+		empty:     semaphore.NewWeighted(int64(n)),
+		full:      fullSemaphore,
+		historic:  make([]int, 0, 2*MAX_CONSUMED+50),
+		ctx:       ctx,
+		cancelCtx: cancelCtx,
 	}
 }
 
 // insert adds a value in the shared vector.
-func (sv *sharedVector) insert(value int) bool {
-	if sv.inserted > MAX_CONSUMED {
+func (sv *sharedVectorV1) insert(value int) bool {
+
+	err := sv.empty.Acquire(sv.ctx, 1)
+	if err != nil {
 		return false
 	}
 
-	sv.empty.Acquire(context.Background(), 1)
+	keepGoing := true
 	sv.mutex.Lock()
-	sv.index++
 
 	sv.vector[sv.index] = value
+	sv.index++
 	sv.inserted++
 
 	sv.historic = append(sv.historic, sv.index)
+	if sv.inserted >= MAX_CONSUMED {
+		sv.cancelCtx()
+		keepGoing = false
+	}
 	sv.mutex.Unlock()
 	sv.full.Release(1)
 
-	return true
+	return keepGoing
 }
 
 // pop removes a value from the shared vector
-func (sv *sharedVector) pop() (int, bool) {
-	if sv.inserted > MAX_CONSUMED && sv.index < 1 {
+func (sv *sharedVectorV1) pop() (int, bool) {
+	err := sv.full.Acquire(sv.ctx, 1) // returns err if context is Done
+	if err != nil {
 		return 0, false
 	}
 
-	sv.full.Acquire(context.Background(), 1)
 	sv.mutex.Lock()
-	value := sv.vector[sv.index]
 	sv.index--
+	value := sv.vector[sv.index]
 
 	sv.historic = append(sv.historic, sv.index)
 	sv.mutex.Unlock()
 	sv.empty.Release(1)
 
 	return value, true
+}
+
+func (sv *sharedVectorV1) getHistoric() []int {
+	return sv.historic
 }

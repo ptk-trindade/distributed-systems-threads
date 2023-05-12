@@ -10,7 +10,7 @@ import (
 var MAX_CONSUMED int = int(1e5)
 var MAX_NUMBER_PRODUCED int = int(1e7)
 
-func consumer(sv *sharedVector) {
+func consumer(sv sharedVector) {
 	val, keepGoing := sv.pop()
 	for keepGoing {
 		if isPrime(val) {
@@ -22,7 +22,7 @@ func consumer(sv *sharedVector) {
 	}
 }
 
-func producer(sv *sharedVector) {
+func producer(sv sharedVector) {
 	keepGoing := true
 	for keepGoing {
 		keepGoing = sv.insert(RandInt(MAX_NUMBER_PRODUCED))
@@ -31,12 +31,13 @@ func producer(sv *sharedVector) {
 
 func main() {
 	if len(os.Args) < 4 {
-		fmt.Println("Error: Missing parameters, insert N (length of shared vector), Np (qty of producers) and Nc (qty of consumers)")
+		fmt.Println("Error: Missing parameters, insert N (length of shared vector), Np (qty of producers), Nc (qty of consumers)")
 		fmt.Println("Usage: go run . <N> <Np> <Nc>")
 		os.Exit(1)
 	}
 
-	n_str, np_str, nc_str := os.Args[1], os.Args[2], os.Args[3]
+	args := os.Args[1:]
+	n_str, np_str, nc_str := args[0], args[1], args[2]
 
 	n, err := strconv.Atoi(n_str)
 	if err != nil {
@@ -56,7 +57,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	sv := newSharedVector(n)
+	if n < 1 || np < 1 || nc < 1 {
+		fmt.Println("Error: Params must be greater than 0")
+		os.Exit(1)
+	}
+
+	var sv sharedVector
+	if len(args) > 3 && args[3] == "v2" {
+		sv = newSharedVectorV2(n)
+	} else {
+		sv = newSharedVectorV1(n)
+	}
 
 	startTime := time.Now()
 
@@ -76,5 +87,6 @@ func main() {
 
 	fmt.Println("Elapsed time: ", elapsedTime)
 
-	writeFile(fmt.Sprintf("%v", sv.historic), "data.txt")
+	historic := sv.getHistoric()
+	writeFile(fmt.Sprintf("%v", historic), "data.txt")
 }
