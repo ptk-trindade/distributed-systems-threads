@@ -29,9 +29,7 @@ func newSharedVectorV2(n int) *sharedVectorV2 {
 
 	fullSemaphore := semaphore.NewWeighted(int64(n))
 
-	for i := 0; i < n; i++ {
-		fullSemaphore.Acquire(ctx, 1)
-	}
+	fullSemaphore.Acquire(ctx, int64(n))
 
 	return &sharedVectorV2{
 		vector:     make([]int, n),
