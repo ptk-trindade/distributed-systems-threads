@@ -92,5 +92,5 @@ func main() {
 	fmt.Println("Elapsed time: ", elapsedTime)
 
 	historic := sv.getHistoric()
-	writeFile(fmt.Sprintf("%v", historic), "data.txt")
+	writeFile(fmt.Sprintf("%v", historic), "bufferOccupancy.txt")
 }

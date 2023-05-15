@@ -52,7 +52,6 @@ func (sv *sharedVectorV1) insert(value int) bool {
 		return false
 	}
 
-	keepGoing := true
 	sv.mutex.Lock()
 	if sv.inserted >= MAX_CONSUMED {
 		sv.cancelCtx()
@@ -68,7 +67,7 @@ func (sv *sharedVectorV1) insert(value int) bool {
 	sv.mutex.Unlock()
 	sv.full.Release(1)
 
-	return keepGoing
+	return true
 }
 
 // pop removes a value from the shared vector
